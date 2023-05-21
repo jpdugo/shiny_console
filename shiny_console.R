@@ -1,5 +1,5 @@
 box::use(
-  purrr[...],
+  purrr,
   shiny[...],
   shinyjs[...],
   glue[glue]
@@ -19,24 +19,31 @@ box::use(
 #' @export
 #' @examples
 #' \dontrun{
-#'   box::use(
-#'     shiny[...],
-#'     shinyjs
-#'   )
-#'   ui <- fluidPage(
-#'     shinyjs$useShinyjs()
-#'     shiny_console$ui("console_1")
-#'   )
-#'   server <- function(input, output, session) {
-#'     shiny_console$server("console_1")
-#'   }
-#'   shinyApp(ui, server)
+#' box::use(
+#'   shiny[...],
+#'   shinyjs
+#' )
+#' ui <- fluidPage(
+#'   shinyjs$useShinyjs(),
+#'   shiny_console$ui("console_1")
+#' )
+#' server <- function(input, output, session) {
+#'   shiny_console$server("console_1")
+#' }
+#' shinyApp(ui, server)
 #' }
 ui <- function(id) {
   ns <- NS(id)
   tagList(
-    textInput(ns("console"), "Type your code:", value = ""),
-    actionButton(ns("send"), "Send code:"),
+    textInput(
+      inputId = ns("console"),
+      label   =  "Type your code:",
+      value   = ""
+    ),
+    actionButton(
+      inputId = ns("send"),
+      label   = "Send code:"
+    ),
     verbatimTextOutput(ns("console_output"))
   )
 }
@@ -48,31 +55,32 @@ ui <- function(id) {
 #' @export
 #'
 #' @rdname mod_console
-server <- function(id) {moduleServer(id, function(input, output, session) {
-  ns <- session$ns
+server <- function(id) {
+  moduleServer(id, function(input, output, session) {
+    ns <- session$ns
 
-  observe({
-    runjs(
-      glue(
-        '$("#{ns("console")}").keyup(function(event) {{
+    observe({
+      runjs(
+        glue(
+          '$("#{ns("console")}").keyup(function(event) {{
              if (event.keyCode === 13) {{
                $("#{ns("send")}").click();
              }}
            }});'
+        )
       )
-    )
-  })
+    })
 
-  out <- eventReactive(input$send, {
-    purrr::safely(~ eval(
-      parse(text = input$console), envir = .GlobalEnv
-    ))() |>
-      purrr::compact() |>
-      (\(x) x[[1]])()
-  })
+    out <- eventReactive(input$send, {
+      purrr$safely(
+        .f = ~ eval(parse(text = input$console), envir = .GlobalEnv)
+      )() |>
+        purrr$compact() |>
+        (\(x) x[[1]])()
+    })
 
-  output$console_output <- renderPrint({
-    out()
+    output$console_output <- renderPrint({
+      out()
+    })
   })
-})
 }
