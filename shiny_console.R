@@ -2,7 +2,8 @@ box::use(
   purrr,
   shiny[...],
   shinyjs[...],
-  glue[glue]
+  glue[glue],
+  stringr[str_extract]
 )
 
 #' Emulate an R console inside a shiny app
@@ -75,8 +76,15 @@ server <- function(id) {
       purrr$safely(
         .f = ~ eval(parse(text = input$console), envir = .GlobalEnv)
       )() |>
-        purrr$compact() |>
-        (\(x) x[[1]])()
+        (\(x) {
+          if (is.null(x$result)) {
+            x$error |>
+              as.character() |>
+              str_extract(": (.*)", group = 1)
+          } else {
+            x$result
+          }
+        })()
     })
 
     output$console_output <- renderPrint({
